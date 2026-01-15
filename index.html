@@ -2,81 +2,94 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Aviation Safety Dashboard - Final Fix</title>
+    <title>Live Aviation Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f9; padding: 20px; color: #1a2b49; }
+        :root { --bg: #f4f7f9; --card: #ffffff; --green: #2d7a4d; --red: #c1272d; --grey: #7f8c8d; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; }
         .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: 1200px; margin: auto; }
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .val { font-size: 2.5rem; font-weight: bold; display: block; }
-        header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #ddd; padding-bottom: 10px; }
+        .card { background: var(--card); padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center;}
+        .val { font-size: 3rem; font-weight: bold; display: block; margin: 10px 0; }
+        h3 { font-size: 0.9rem; text-transform: uppercase; color: #555; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        #error-msg { background: #ff4444; color: white; padding: 10px; display: none; margin-bottom: 20px; border-radius: 5px; }
     </style>
 </head>
 <body>
 
-<header><h1>Aviation Safety Compliance Dashboard</h1></header>
+<div id="error-msg">Error: Unable to load data from Google Sheets.</div>
 
 <div class="grid">
     <div class="card">
-        <h3>Issue Status</h3>
-        <p style="color:#2d7a4d">Resolved: <span id="res" class="val">0</span></p>
-        <p style="color:#c1272d">Open: <span id="opn" class="val">0</span></p>
-        <p style="color:#7f8c8d">Cancelled: <span id="can" class="val">0</span></p>
+        <h3>Resolved</h3>
+        <span id="res" class="val" style="color:var(--green)">0</span>
     </div>
-    <div class="card" style="text-align:center">
+    <div class="card">
+        <h3>Open</h3>
+        <span id="opn" class="val" style="color:var(--red)">0</span>
+    </div>
+    <div class="card">
+        <h3>Cancelled</h3>
+        <span id="can" class="val" style="color:var(--grey)">0</span>
+    </div>
+    <div class="card" style="grid-column: span 1;">
         <h3>Overdue</h3>
-        <span id="ovd" class="val" style="color:#c1272d; font-size: 5rem; margin: 20px 0;">0</span>
+        <span id="ovd" class="val" style="color:var(--red); font-size: 5rem;">0</span>
     </div>
-    <div class="card"><canvas id="riskChart"></canvas></div>
+    <div class="card" style="grid-column: span 2;">
+        <h3>Risk Distribution</h3>
+        <canvas id="riskChart" style="max-height: 250px;"></canvas>
+    </div>
 </div>
 
-<script type="text/javascript" src="https://www.google.com/jsapi"></script>
 <script>
-    // 1. Point to your specific sheet ID
-    const spreadsheetId = '2PACX-1vRBeLNWqBShgigeBIIHA4agRkFpguEZ6Pc7yWNQZmLXpszr3Q_PTudjnLumbqnjzDTBTmn6Rf6Wh7CE';
-    const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/' + spreadsheetId + '/pub?output=csv';
+    const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRBeLNWqBShgigeBIIHA4agRkFpguEZ6Pc7yWNQZmLXpszr3Q_PTudjnLumbqnjzDTBTmn6Rf6Wh7CE/pub?output=csv';
 
-    async function loadData() {
+    async function loadDashboard() {
         try {
-            const response = await fetch(sheetUrl);
-            if (!response.ok) throw new Error('Network error');
-            const data = await response.text();
+            const response = await fetch(CSV_URL + '&cache=' + Date.now());
+            const text = await response.text();
             
-            // Parsing CSV manually to avoid library conflicts
-            const rows = data.split('\n').map(row => row.split(',').map(c => c.replace(/"/g, '').trim()));
+            // Turn the CSV text into a Map for easy searching
+            const rows = text.split('\n').map(r => r.split(','));
+            const dataMap = {};
+            
+            rows.forEach(row => {
+                if(row.length >= 2) {
+                    const key = row[0].replace(/"/g, '').trim().toLowerCase();
+                    const value = parseInt(row[1].replace(/"/g, '').trim()) || 0;
+                    dataMap[key] = value;
+                }
+            });
 
-            // Mapping based on your specific layout
-            const stats = {
-                res: rows[1][1], opn: rows[2][1], can: rows[3][1], ovd: rows[4][1],
-                low: rows[8][1], med: rows[9][1], high: rows[10][1]
-            };
+            console.log("Processed Data:", dataMap);
 
-            // Update Text
-            document.getElementById('res').innerText = stats.res;
-            document.getElementById('opn').innerText = stats.opn;
-            document.getElementById('can').innerText = stats.can;
-            document.getElementById('ovd').innerText = stats.ovd;
+            // Update UI with the data from your sheet keys
+            document.getElementById('res').innerText = dataMap['resolved'] || 0;
+            document.getElementById('opn').innerText = dataMap['open'] || 0;
+            document.getElementById('can').innerText = dataMap['cancelled'] || 0;
+            document.getElementById('ovd').innerText = dataMap['overdue'] || 0;
 
             // Update Chart
             new Chart(document.getElementById('riskChart'), {
-                type: 'doughnut',
+                type: 'bar',
                 data: {
-                    labels: ['Low', 'Med', 'High'],
+                    labels: ['Low', 'Medium', 'High'],
                     datasets: [{
-                        data: [stats.low, stats.med, stats.high],
+                        label: 'Risk Count',
+                        data: [dataMap['low risk'], dataMap['medium risk'], dataMap['high risk']],
                         backgroundColor: ['#2d7a4d', '#fbb03b', '#c1272d']
                     }]
-                }
+                },
+                options: { scales: { y: { beginAtZero: true } } }
             });
+
         } catch (err) {
+            document.getElementById('error-msg').style.display = 'block';
             console.error(err);
-            // If it still fails, it's likely a local file security block.
-            // Suggesting the user host it or use a local server.
-            alert("Security Block: Browsers often block local files from reading Google Sheets. Try opening this file using 'Live Server' in VS Code or uploading it to a free host like GitHub Pages.");
         }
     }
 
-    loadData();
+    loadDashboard();
 </script>
 </body>
 </html>
