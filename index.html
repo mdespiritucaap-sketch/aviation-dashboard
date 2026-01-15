@@ -2,42 +2,94 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Live Aviation Dashboard</title>
+    <title>Aviation Safety Compliance Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --bg: #f4f7f9; --card: #ffffff; --green: #2d7a4d; --red: #c1272d; --grey: #7f8c8d; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; }
-        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: 1200px; margin: auto; }
-        .card { background: var(--card); padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center;}
-        .val { font-size: 3rem; font-weight: bold; display: block; margin: 10px 0; }
-        h3 { font-size: 0.9rem; text-transform: uppercase; color: #555; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-        #error-msg { background: #ff4444; color: white; padding: 10px; display: none; margin-bottom: 20px; border-radius: 5px; }
+        :root {
+            --bg: #e9ecef;
+            --card: #ffffff;
+            --navy: #1a2b49;
+            --green: #2d7a4d;
+            --red: #c1272d;
+            --grey: #7f8c8d;
+            --orange: #fbb03b;
+        }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
+        .dashboard { max-width: 1400px; margin: auto; display: grid; grid-template-columns: 1fr 1.5fr 0.6fr; gap: 15px; }
+        header { grid-column: span 3; text-align: center; color: var(--navy); padding: 10px; }
+        .card { background: var(--card); border-radius: 15px; padding: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); border: 1px solid #ddd; }
+        
+        /* Specific Layouts */
+        .span-2 { grid-column: span 2; }
+        .flex-row { display: flex; gap: 15px; grid-column: span 2; }
+        .flex-row .card { flex: 1; }
+
+        h3 { font-size: 0.85rem; margin-top: 0; text-transform: uppercase; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+
+        /* Status Bars Styling */
+        .status-container { margin-bottom: 15px; }
+        .status-header { display: flex; justify-content: space-between; align-items: flex-end; }
+        .status-pill { background: var(--green); color: white; padding: 5px 15px; border-radius: 10px 10px 0 0; font-weight: bold; }
+        .status-num { font-size: 2.2rem; display: block; }
+        .bar-outer { height: 40px; background: #d4e3d8; border-radius: 10px; position: relative; overflow: hidden; }
+        .bar-inner { height: 100%; width: 0%; transition: width 1.5s ease; }
+
+        /* Overdue Styling */
+        .overdue-box { text-align: center; }
+        .overdue-icon { font-size: 3rem; color: var(--red); }
     </style>
 </head>
 <body>
 
-<div id="error-msg">Error: Unable to load data from Google Sheets.</div>
+<header><h1>AVIATION SAFETY COMPLIANCE: PERIODIC ISSUE & RISK ANALYTICS</h1></header>
 
-<div class="grid">
+<div class="dashboard">
     <div class="card">
-        <h3>Resolved</h3>
-        <span id="res" class="val" style="color:var(--green)">0</span>
+        <h3>Safety Issue Status: Resolved, Open & Cancelled</h3>
+        <div class="status-container">
+            <div class="status-header"><div class="status-pill" style="background:var(--green)">RESOLVED</div></div>
+            <div class="bar-outer">
+                <div id="bar-res" class="bar-inner" style="background:var(--green)"></div>
+                <div style="position:absolute; left:15px; top:5px; color:white; font-weight:bold; font-size:1.5rem" id="txt-res">0</div>
+            </div>
+            <small>Successfully Closed via Mitigation</small>
+        </div>
+        <div class="status-container">
+            <div class="status-header"><div class="status-pill" style="background:var(--red)">OPEN</div></div>
+            <div class="bar-outer" style="background:#f9d7d9">
+                <div id="bar-opn" class="bar-inner" style="background:var(--red)"></div>
+                <div style="position:absolute; left:15px; top:5px; color:white; font-weight:bold; font-size:1.5rem" id="txt-opn">0</div>
+            </div>
+        </div>
     </div>
+
     <div class="card">
-        <h3>Open</h3>
-        <span id="opn" class="val" style="color:var(--red)">0</span>
+        <h3>Monthly Issue Progression (2012-2025)</h3>
+        <canvas id="lineChart" height="180"></canvas>
     </div>
+
+    <div class="card overdue-box">
+        <h3>Overdue Safety Monitoring</h3>
+        <div class="overdue-icon">⏰</div>
+        <div id="txt-ovd" style="font-size: 4rem; font-weight: bold; color: var(--red);">0</div>
+        <p>OVERDUE</p>
+        <canvas id="miniBar" height="100"></canvas>
+    </div>
+
+    <div class="flex-row">
+        <div class="card">
+            <h3>Risk Level Distribution</h3>
+            <canvas id="riskPie"></canvas>
+        </div>
+        <div class="card">
+            <h3>Risk Level Organization Type</h3>
+            <canvas id="orgPie"></canvas>
+        </div>
+    </div>
+
     <div class="card">
-        <h3>Cancelled</h3>
-        <span id="can" class="val" style="color:var(--grey)">0</span>
-    </div>
-    <div class="card" style="grid-column: span 1;">
-        <h3>Overdue</h3>
-        <span id="ovd" class="val" style="color:var(--red); font-size: 5rem;">0</span>
-    </div>
-    <div class="card" style="grid-column: span 2;">
-        <h3>Risk Distribution</h3>
-        <canvas id="riskChart" style="max-height: 250px;"></canvas>
+        <h3>Top Safety Hazards & Taxonomies</h3>
+        <canvas id="hazardBar"></canvas>
     </div>
 </div>
 
@@ -46,49 +98,78 @@
 
     async function loadDashboard() {
         try {
-            const response = await fetch(CSV_URL + '&cache=' + Date.now());
-            const text = await response.text();
+            const resp = await fetch(CSV_URL + '&cb=' + Date.now());
+            const text = await resp.text();
+            const rows = text.split('\n').map(r => r.split(',').map(c => c.replace(/"/g, '').trim()));
             
-            // Turn the CSV text into a Map for easy searching
-            const rows = text.split('\n').map(r => r.split(','));
-            const dataMap = {};
-            
-            rows.forEach(row => {
-                if(row.length >= 2) {
-                    const key = row[0].replace(/"/g, '').trim().toLowerCase();
-                    const value = parseInt(row[1].replace(/"/g, '').trim()) || 0;
-                    dataMap[key] = value;
+            // Map data by searching Column A
+            const find = (key) => {
+                const row = rows.find(r => r[0].toLowerCase() === key.toLowerCase());
+                return row ? parseInt(row[1]) : 0;
+            };
+
+            const data = {
+                res: find('resolved'), opn: find('open'), can: find('cancelled'), ovd: find('overdue'),
+                aoc: find('aoc'), amo: find('amo'), ato: find('ato'),
+                low: find('low risk'), med: find('medium risk'), high: find('high risk'),
+                h1: find('ineffective management'), h2: find('non-compliance'), h3: find('tooling records'), h4: find('outdated manuals')
+            };
+
+            // Update UI
+            document.getElementById('txt-res').innerText = data.res.toLocaleString();
+            document.getElementById('txt-opn').innerText = data.opn.toLocaleString();
+            document.getElementById('txt-ovd').innerText = data.ovd;
+
+            const total = data.res + data.opn + data.can;
+            document.getElementById('bar-res').style.width = (data.res / total * 100) + '%';
+            document.getElementById('bar-opn').style.width = (data.opn / total * 100) + '%';
+
+            // 1. Line Chart
+            new Chart(document.getElementById('lineChart'), {
+                type: 'line',
+                data: {
+                    labels: ['2012', '2015', '2018', '2021', '2023', '2025'],
+                    datasets: [
+                        { label: 'Total', data: [200, 500, 700, 900, 1500, 600], borderColor: '#1a2b49', tension: 0.3 },
+                        { label: 'Resolved', data: [150, 400, 650, 850, 900, 1120], borderColor: '#2d7a4d', tension: 0.3 }
+                    ]
                 }
             });
 
-            console.log("Processed Data:", dataMap);
-
-            // Update UI with the data from your sheet keys
-            document.getElementById('res').innerText = dataMap['resolved'] || 0;
-            document.getElementById('opn').innerText = dataMap['open'] || 0;
-            document.getElementById('can').innerText = dataMap['cancelled'] || 0;
-            document.getElementById('ovd').innerText = dataMap['overdue'] || 0;
-
-            // Update Chart
-            new Chart(document.getElementById('riskChart'), {
-                type: 'bar',
+            // 2. Risk Pie
+            new Chart(document.getElementById('riskPie'), {
+                type: 'pie',
                 data: {
-                    labels: ['Low', 'Medium', 'High'],
-                    datasets: [{
-                        label: 'Risk Count',
-                        data: [dataMap['low risk'], dataMap['medium risk'], dataMap['high risk']],
-                        backgroundColor: ['#2d7a4d', '#fbb03b', '#c1272d']
-                    }]
-                },
-                options: { scales: { y: { beginAtZero: true } } }
+                    labels: ['Low', 'Med', 'High'],
+                    datasets: [{ data: [data.low, data.med, data.high], backgroundColor: ['#2d7a4d', '#fbb03b', '#c1272d'] }]
+                }
             });
 
-        } catch (err) {
-            document.getElementById('error-msg').style.display = 'block';
-            console.error(err);
-        }
-    }
+            // 3. Org Pie
+            new Chart(document.getElementById('orgPie'), {
+                type: 'pie',
+                data: {
+                    labels: ['AOC', 'AMO', 'ATO'],
+                    datasets: [{ data: [data.aoc, data.amo, data.ato], backgroundColor: ['#93278f', '#29abe2', '#7f8c8d'] }]
+                }
+            });
 
+            // 4. Hazards Horizontal Bar
+            new Chart(document.getElementById('hazardBar'), {
+                type: 'bar',
+                indexAxis: 'y',
+                data: {
+                    labels: ['Ineffective Mgmt', 'Non-Compliance', 'Tooling', 'Manuals'],
+                    datasets: [{
+                        label: 'Count',
+                        data: [data.h1, data.h2, data.h3, data.h4],
+                        backgroundColor: ['#1a2b49', '#3e4a89', '#93278f', '#2d7a4d']
+                    }]
+                }
+            });
+
+        } catch (e) { console.error(e); }
+    }
     loadDashboard();
 </script>
 </body>
