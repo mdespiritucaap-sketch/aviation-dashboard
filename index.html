@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Aviation Safety Dashboard - Final Fix</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f9; padding: 20px; color: #1a2b49; }
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: 1200px; margin: auto; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .val { font-size: 2.5rem; font-weight: bold; display: block; }
+        header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #ddd; padding-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+<header><h1>Aviation Safety Compliance Dashboard</h1></header>
+
+<div class="grid">
+    <div class="card">
+        <h3>Issue Status</h3>
+        <p style="color:#2d7a4d">Resolved: <span id="res" class="val">0</span></p>
+        <p style="color:#c1272d">Open: <span id="opn" class="val">0</span></p>
+        <p style="color:#7f8c8d">Cancelled: <span id="can" class="val">0</span></p>
+    </div>
+    <div class="card" style="text-align:center">
+        <h3>Overdue</h3>
+        <span id="ovd" class="val" style="color:#c1272d; font-size: 5rem; margin: 20px 0;">0</span>
+    </div>
+    <div class="card"><canvas id="riskChart"></canvas></div>
+</div>
+
+<script type="text/javascript" src="https://www.google.com/jsapi"></script>
+<script>
+    // 1. Point to your specific sheet ID
+    const spreadsheetId = '2PACX-1vRBeLNWqBShgigeBIIHA4agRkFpguEZ6Pc7yWNQZmLXpszr3Q_PTudjnLumbqnjzDTBTmn6Rf6Wh7CE';
+    const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/' + spreadsheetId + '/pub?output=csv';
+
+    async function loadData() {
+        try {
+            const response = await fetch(sheetUrl);
+            if (!response.ok) throw new Error('Network error');
+            const data = await response.text();
+            
+            // Parsing CSV manually to avoid library conflicts
+            const rows = data.split('\n').map(row => row.split(',').map(c => c.replace(/"/g, '').trim()));
+
+            // Mapping based on your specific layout
+            const stats = {
+                res: rows[1][1], opn: rows[2][1], can: rows[3][1], ovd: rows[4][1],
+                low: rows[8][1], med: rows[9][1], high: rows[10][1]
+            };
+
+            // Update Text
+            document.getElementById('res').innerText = stats.res;
+            document.getElementById('opn').innerText = stats.opn;
+            document.getElementById('can').innerText = stats.can;
+            document.getElementById('ovd').innerText = stats.ovd;
+
+            // Update Chart
+            new Chart(document.getElementById('riskChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Low', 'Med', 'High'],
+                    datasets: [{
+                        data: [stats.low, stats.med, stats.high],
+                        backgroundColor: ['#2d7a4d', '#fbb03b', '#c1272d']
+                    }]
+                }
+            });
+        } catch (err) {
+            console.error(err);
+            // If it still fails, it's likely a local file security block.
+            // Suggesting the user host it or use a local server.
+            alert("Security Block: Browsers often block local files from reading Google Sheets. Try opening this file using 'Live Server' in VS Code or uploading it to a free host like GitHub Pages.");
+        }
+    }
+
+    loadData();
+</script>
+</body>
+</html>
