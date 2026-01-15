@@ -2,32 +2,30 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Aviation Safety Compliance Dashboard</title>
+    <title>Live Aviation Safety Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --bg: #e9ecef;
-            --card: #ffffff;
-            --navy: #1a2b49;
-            --green: #2d7a4d;
-            --red: #c1272d;
-            --grey: #7f8c8d;
-            --orange: #fbb03b;
+            --bg: #e9ecef; --card: #ffffff; --navy: #1a2b49;
+            --green: #2d7a4d; --red: #c1272d; --grey: #7f8c8d; --orange: #fbb03b;
         }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
         .dashboard { max-width: 1400px; margin: auto; display: grid; grid-template-columns: 1fr 1.5fr 0.6fr; gap: 15px; }
         header { grid-column: span 3; text-align: center; color: var(--navy); padding: 10px; }
-        .card { background: var(--card); border-radius: 15px; padding: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); border: 1px solid #ddd; }
         
+        /* Refresh Button Styling */
+        .controls { grid-column: span 3; text-align: center; margin-bottom: 10px; }
+        .btn-refresh { padding: 8px 20px; cursor: pointer; border-radius: 20px; background: var(--navy); color: white; border: none; font-weight: bold; transition: 0.3s; }
+        .btn-refresh:hover { background: #334466; }
+        
+        .card { background: var(--card); border-radius: 15px; padding: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); border: 1px solid #ddd; }
         .flex-row { display: flex; gap: 15px; grid-column: span 2; }
         .flex-row .card { flex: 1; }
-
         h3 { font-size: 0.85rem; margin-top: 0; text-transform: uppercase; border-bottom: 1px solid #eee; padding-bottom: 8px; }
 
-        /* Status Bars Styling */
+        /* Status Bars */
         .status-container { margin-bottom: 12px; }
-        .status-header { display: flex; justify-content: space-between; align-items: flex-end; }
-        .status-pill { color: white; padding: 4px 12px; border-radius: 8px 8px 0 0; font-weight: bold; font-size: 0.75rem; }
+        .status-pill { color: white; padding: 4px 12px; border-radius: 8px 8px 0 0; font-weight: bold; font-size: 0.75rem; width: fit-content; }
         .bar-outer { height: 35px; background: #eee; border-radius: 8px; position: relative; overflow: hidden; border: 1px solid #ddd; }
         .bar-inner { height: 100%; width: 0%; transition: width 1.5s ease; }
         .bar-label { position: absolute; left: 12px; top: 4px; color: white; font-weight: bold; font-size: 1.3rem; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); }
@@ -38,71 +36,60 @@
 </head>
 <body>
 
-<header><h1>AVIATION SAFETY COMPLIANCE: PERIODIC ISSUE & RISK ANALYTICS</h1></header>
+<header><h1>AVIATION SAFETY COMPLIANCE: LIVE ANALYTICS</h1></header>
+
+<div class="controls">
+    <button class="btn-refresh" onclick="loadDashboard()">🔄 REFRESH DATA</button>
+    <p id="last-update" style="font-size: 0.7rem; color: #666; margin-top: 5px;">Last Update: Syncing...</p>
+</div>
 
 <div class="dashboard">
     <div class="card">
-        <h3>Safety Issue Status: Resolved, Open & Cancelled</h3>
-        
+        <h3>Safety Issue Status</h3>
         <div class="status-container">
-            <div class="status-header"><div class="status-pill" style="background:var(--green)">RESOLVED</div></div>
-            <div class="bar-outer">
-                <div id="bar-res" class="bar-inner" style="background:var(--green)"></div>
-                <div class="bar-label" id="txt-res">0</div>
-            </div>
+            <div class="status-pill" style="background:var(--green)">RESOLVED</div>
+            <div class="bar-outer"><div id="bar-res" class="bar-inner" style="background:var(--green)"></div><div class="bar-label" id="txt-res">0</div></div>
         </div>
-
         <div class="status-container">
-            <div class="status-header"><div class="status-pill" style="background:var(--red)">OPEN</div></div>
-            <div class="bar-outer">
-                <div id="bar-opn" class="bar-inner" style="background:var(--red)"></div>
-                <div class="bar-label" id="txt-opn">0</div>
-            </div>
+            <div class="status-pill" style="background:var(--red)">OPEN</div>
+            <div class="bar-outer"><div id="bar-opn" class="bar-inner" style="background:var(--red)"></div><div class="bar-label" id="txt-opn">0</div></div>
         </div>
-
         <div class="status-container">
-            <div class="status-header"><div class="status-pill" style="background:var(--grey)">CANCELLED</div></div>
-            <div class="bar-outer">
-                <div id="bar-can" class="bar-inner" style="background:var(--grey)"></div>
-                <div class="bar-label" id="txt-can">0</div>
-            </div>
+            <div class="status-pill" style="background:var(--grey)">CANCELLED</div>
+            <div class="bar-outer"><div id="bar-can" class="bar-inner" style="background:var(--grey)"></div><div class="bar-label" id="txt-can">0</div></div>
         </div>
     </div>
 
     <div class="card">
-        <h3>Monthly Issue Progression (2012-2025)</h3>
+        <h3>Monthly Issue Progression</h3>
         <canvas id="lineChart" height="180"></canvas>
     </div>
 
     <div class="card overdue-box">
-        <h3>Overdue Safety Monitoring</h3>
+        <h3>Overdue Monitoring</h3>
         <div class="overdue-icon">⏰</div>
         <div id="txt-ovd" style="font-size: 4rem; font-weight: bold; color: var(--red);">0</div>
-        <p>OVERDUE</p>
+        <p>TOTAL OVERDUE</p>
     </div>
 
     <div class="flex-row">
-        <div class="card">
-            <h3>Risk Level Distribution</h3>
-            <canvas id="riskPie"></canvas>
-        </div>
-        <div class="card">
-            <h3>Organization Type</h3>
-            <canvas id="orgPie"></canvas>
-        </div>
+        <div class="card"><canvas id="riskPie"></canvas></div>
+        <div class="card"><canvas id="orgPie"></canvas></div>
     </div>
 
     <div class="card">
-        <h3>Top Safety Hazards</h3>
+        <h3>Top Hazards</h3>
         <canvas id="hazardBar"></canvas>
     </div>
 </div>
 
 <script>
     const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRBeLNWqBShgigeBIIHA4agRkFpguEZ6Pc7yWNQZmLXpszr3Q_PTudjnLumbqnjzDTBTmn6Rf6Wh7CE/pub?output=csv';
+    let lineChart, riskPie, orgPie, hazardBar; // Global chart variables
 
     async function loadDashboard() {
         try {
+            // "cb=" forces the browser and Google to ignore cached/saved data
             const resp = await fetch(CSV_URL + '&cb=' + Date.now());
             const text = await resp.text();
             const rows = text.split('\n').map(r => r.split(',').map(c => c.replace(/"/g, '').trim()));
@@ -119,22 +106,61 @@
                 h1: find('ineffective management'), h2: find('non-compliance'), h3: find('tooling records'), h4: find('outdated manuals')
             };
 
-            // Update UI Numbers
+            // Update Numbers & Bars
             document.getElementById('txt-res').innerText = data.res.toLocaleString();
             document.getElementById('txt-opn').innerText = data.opn.toLocaleString();
             document.getElementById('txt-can').innerText = data.can.toLocaleString();
             document.getElementById('txt-ovd').innerText = data.ovd;
+            document.getElementById('last-update').innerText = "Last Update: " + new Date().toLocaleTimeString();
 
-            // Update Status Bars Logic
             const total = data.res + data.opn + data.can;
             document.getElementById('bar-res').style.width = ((data.res / total) * 100) + '%';
             document.getElementById('bar-opn').style.width = ((data.opn / total) * 100) + '%';
             document.getElementById('bar-can').style.width = ((data.can / total) * 100) + '%';
 
-            // 1. Line Chart (Progressive Trend)
-            new Chart(document.getElementById('lineChart'), {
+            // Destroy old charts before recreating them (important for updates!)
+            if (lineChart) lineChart.destroy();
+            if (riskPie) riskPie.destroy();
+            if (orgPie) orgPie.destroy();
+            if (hazardBar) hazardBar.destroy();
+
+            lineChart = new Chart(document.getElementById('lineChart'), {
                 type: 'line',
                 data: {
-                    labels: ['2012', '2015', '2018', '2021', '2024', 'Current'],
+                    labels: ['2012', '2015', '2018', '2021', '2024', 'Live'],
                     datasets: [
-                        { label: 'Resolved', data: [100, 350, 600, 800, 1000,
+                        { label: 'Resolved', data: [100, 350, 600, 800, 1000, data.res], borderColor: '#2d7a4d', tension: 0.3 }
+                    ]
+                }
+            });
+
+            riskPie = new Chart(document.getElementById('riskPie'), {
+                type: 'pie',
+                data: { labels: ['Low', 'Med', 'High'], datasets: [{ data: [data.low, data.med, data.high], backgroundColor: ['#2d7a4d', '#fbb03b', '#c1272d'] }] }
+            });
+
+            orgPie = new Chart(document.getElementById('orgPie'), {
+                type: 'doughnut',
+                data: { labels: ['AOC', 'AMO', 'ATO'], datasets: [{ data: [data.aoc, data.amo, data.ato], backgroundColor: ['#93278f', '#29abe2', '#22cccc'] }] }
+            });
+
+            hazardBar = new Chart(document.getElementById('hazardBar'), {
+                type: 'bar',
+                indexAxis: 'y',
+                data: {
+                    labels: ['Mgmt', 'Compliance', 'Tooling', 'Manuals'],
+                    datasets: [{ label: 'Findings', data: [data.h1, data.h2, data.h3, data.h4], backgroundColor: '#1a2b49' }]
+                }
+            });
+
+        } catch (e) { console.error("Update failed", e); }
+    }
+
+    // Initial load
+    loadDashboard();
+
+    // Auto-refresh every 60 seconds
+    setInterval(loadDashboard, 60000);
+</script>
+</body>
+</html>
